@@ -1,0 +1,3 @@
+python-dotenv
+garminconnect
+curl_cffi
