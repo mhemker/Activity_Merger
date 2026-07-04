@@ -130,6 +130,14 @@ Explorer).
 
 ---
 
+## 🤖 AI Assistance
+
+Portions of this repository (including the DJI auto-import scripts and this
+README) were developed with the help of AI coding assistants — Claude
+(Anthropic) and Gemini (Google).
+
+---
+
 ## 📂 Repository File Structure
 
 ```text
