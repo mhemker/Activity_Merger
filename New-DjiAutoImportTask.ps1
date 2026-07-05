@@ -109,12 +109,13 @@ if (Test-ScheduledTaskExists -Name $TaskName) {
     schtasks /delete /tn "$TaskName" /f | Out-Null
 }
 
-# /sc onevent + /ec + /mo creates an event-triggered task. Event ID 2003 in
-# the DriverFrameworks-UserMode/Operational log fires when a USB storage
-# device finishes installing - this is the same trigger described in
-# SETUP-INSTRUCTIONS.md, just automated here.
-$eventChannel = 'Microsoft-Windows-DriverFrameworks-UserMode/Operational'
-$eventQuery   = '*[System[EventID=2003]]'
+# /sc onevent + /ec + /mo creates an event-triggered task. Event ID 400 in
+# the Kernel-PnP/Configuration log fires every time a device is enumerated -
+# i.e. every physical connection - unlike the DriverFrameworks-UserMode
+# "install" event, which only fires the first time Windows installs a
+# driver for a given device.
+$eventChannel = 'Microsoft-Windows-Kernel-PnP/Configuration'
+$eventQuery   = '*[System[(EventID=400 or EventID=410)]]'
 
 $prevPref = $ErrorActionPreference
 $ErrorActionPreference = 'SilentlyContinue'

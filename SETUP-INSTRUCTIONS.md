@@ -84,10 +84,10 @@ New-DjiAutoImportTask.bat "D:\Footage\DJI"
 ```
 
 This creates a Task Scheduler task named "DJI Auto Import" with the same
-event trigger described in Option 2 below (fires on USB device install,
-Event ID 2003). It's safe to re-run — it removes and recreates the task each
-time, so you can change the destination folder later by just running it
-again.
+event trigger described in Option 2 below (fires every time a device is
+connected, Kernel-PnP Event ID 400/410). It's safe to re-run — it removes
+and recreates the task each time, so you can change the destination folder
+later by just running it again.
 
 To remove the task later:
 ```powershell
@@ -99,8 +99,8 @@ New-DjiAutoImportTask.bat -Remove
 
 ### Option 2 — Manual
 If you'd rather set it up by hand (or the script above fails), Windows Task
-Scheduler can trigger on the "device installed" event that fires when a USB
-drive is connected:
+Scheduler can trigger on the event that fires every time a device is
+connected:
 
 1. Open **Task Scheduler** → **Create Task** (not "Basic Task", so you get
    full trigger options).
@@ -108,25 +108,45 @@ drive is connected:
    is logged on or not" if you want it to work even when locked, or leave the
    default to run only when logged in.
 3. **Triggers tab** → **New** → set "Begin the task" to **On an event**:
-   - Log: `Microsoft-Windows-DriverFrameworks-UserMode/Operational`
-   - Source: `DriverFrameworks-UserMode`
-   - Event ID: `2003`
-   (This fires when a new USB storage device finishes installing.)
+   - Log: `Microsoft-Windows-Kernel-PnP/Configuration`
+   - Source: `Kernel-PnP`
+   - Event ID: `400` (also add `410` — click "New Event Filter" and use a
+     custom XPath query instead if you want both IDs in one trigger:
+     `*[System[(EventID=400 or EventID=410)]]`)
+   (This fires every time a device is enumerated - i.e. every physical
+   connection - not just the first time Windows installs a driver for it.)
 4. **Actions tab** → **New** → Action: "Start a program"
    - Program/script: `powershell.exe`
    - Add arguments:
      `-NoProfile -ExecutionPolicy Bypass -File "C:\Scripts\DJI-AutoImport\DJI-AutoImport.ps1"`
 5. **Conditions/Settings tabs**: uncheck "Start the task only if the computer
    is on AC power" if this is a laptop, so it also runs on battery.
-6. Save. Plug the camera back in to test — it may take a few seconds after
-   Windows finishes installing the device driver for the trigger to fire.
+6. Save. Plug the camera back in to test — it may take a few seconds for the
+   trigger to fire.
 
 ### Note on this trigger
-The "DriverFrameworks-UserMode" event fires for USB device installation in
-general, not specifically for this camera. The script itself checks for a
-DCIM folder with matching files, so it's safe if the task fires for other USB
-devices — it'll just detect nothing and exit quietly. But if you plug in
-other USB drives often, it will run (harmlessly) each time.
+Kernel-PnP/Configuration events fire for every device connecting or
+reconfiguring — not just DJI cameras, and not just USB storage (keyboards,
+mice, etc. can trigger it too). The script itself checks for a DCIM\DJI*
+folder with matching files (and, depending on your settings, the camera's
+identity), so it's safe if the task fires for unrelated devices — it'll just
+detect nothing and exit quietly.
+
+### If the task still doesn't fire
+1. Open **Event Viewer** → **Applications and Services Logs** →
+   **Microsoft-Windows-Kernel-PnP** → **Configuration**. Plug the camera in
+   and confirm Event ID 400 or 410 actually appears. If nothing appears,
+   Windows may be logging under a different event/log for your specific
+   camera/USB controller — note whatever Event ID *does* appear when you
+   plug it in, and use that ID in the trigger instead.
+2. Check **Task Scheduler Library** → find "DJI Auto Import" → **History**
+   tab (enable "Enable All Tasks History" from the Action menu if it's
+   empty) to see whether the task fired but failed, versus never firing at
+   all.
+3. Confirm `%TEMP%\DJI_AutoImport.log` doesn't exist or wasn't updated after
+   plugging in the camera — if the log has recent entries but no camera was
+   detected, the trigger fired but detection/identity filtering is the
+   issue, not the trigger.
 
 ## Adjusting behavior
 - Destination folder: defaults to `%USERPROFILE%\Videos\DJI`. Override it
