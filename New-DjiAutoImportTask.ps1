@@ -109,13 +109,14 @@ if (Test-ScheduledTaskExists -Name $TaskName) {
     schtasks /delete /tn "$TaskName" /f | Out-Null
 }
 
-# /sc onevent + /ec + /mo creates an event-triggered task. Event ID 400 in
-# the Kernel-PnP/Configuration log fires every time a device is enumerated -
-# i.e. every physical connection - unlike the DriverFrameworks-UserMode
-# "install" event, which only fires the first time Windows installs a
-# driver for a given device.
-$eventChannel = 'Microsoft-Windows-Kernel-PnP/Configuration'
-$eventQuery   = '*[System[(EventID=400 or EventID=410)]]'
+# /sc onevent + /ec + /mo creates an event-triggered task. Event ID 1006 in
+# the Partition/Diagnostic log fires whenever a disk arrives or leaves
+# (Capacity=0 on removal, actual size on arrival), confirmed by checking
+# Event Viewer against this specific machine/camera. The Capacity > 0
+# predicate restricts the trigger to arrival only, so it won't also fire
+# on disconnect.
+$eventChannel = 'Microsoft-Windows-Partition/Diagnostic'
+$eventQuery   = "*[System[EventID=1006]] and *[EventData[Data[@Name='Capacity'] > 0]]"
 
 $prevPref = $ErrorActionPreference
 $ErrorActionPreference = 'SilentlyContinue'
